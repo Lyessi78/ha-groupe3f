@@ -131,7 +131,7 @@ class Groupe3FSensor(CoordinatorEntity, SensorEntity):
             has_mean=False,
             has_sum=True,
             name=self.name,
-            source=DOMAIN,
+            source="recorder",
             statistic_id=self.entity_id,
             unit_of_measurement=self.native_unit_of_measurement,
         )
