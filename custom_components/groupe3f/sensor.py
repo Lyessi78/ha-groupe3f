@@ -1,15 +1,25 @@
 """Sensor platform for Groupe 3F."""
 from __future__ import annotations
+import logging
+from datetime import datetime
 from typing import Any
 
+from homeassistant.components.recorder.models import StatisticData, StatisticMetaData
+from homeassistant.components.recorder.statistics import (
+    async_import_statistics,
+    get_last_statistics,
+)
 from homeassistant.components.sensor import (
     SensorDeviceClass, SensorEntity, SensorStateClass
 )
 from homeassistant.const import UnitOfVolume
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import CONF_CONTRACT_ID, DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up sensors."""
@@ -23,7 +33,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     for key, name in types.items():
         # Check if any data exists for this meter type
         if any(item.get(key) is True for item in coordinator.data):
-            entities.append(Groupe3FSensor(coordinator, contract_id, key, name))
+            entities.append(Groupe3FSensor(hass, coordinator, contract_id, key, name))
 
     async_add_entities(entities)
 
@@ -34,8 +44,9 @@ class Groupe3FSensor(CoordinatorEntity, SensorEntity):
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = UnitOfVolume.CUBIC_METERS
 
-    def __init__(self, coordinator, contract_id, filter_key, name):
+    def __init__(self, hass, coordinator, contract_id, filter_key, name):
         super().__init__(coordinator)
+        self.hass = hass
         self._filter = filter_key
         self._attr_name = name
         self._attr_unique_id = f"{contract_id}_{filter_key}"
@@ -66,3 +77,64 @@ class Groupe3FSensor(CoordinatorEntity, SensorEntity):
             "serial_number": latest.get("painsCodser", "").strip(),
             "monthly_cons_m3": latest.get("ecconVal")
         }
+
+    async def async_added_to_hass(self) -> None:
+        """Handle entity which will be added."""
+        await super().async_added_to_hass()
+        self._import_historical_statistics()
+
+    async def _update_callback(self) -> None:
+        """Handle update."""
+        await super()._update_callback()
+        self._import_historical_statistics()
+
+    def _import_historical_statistics(self):
+        """Import historical statistics from API data."""
+        data = [i for i in self.coordinator.data if i.get(self._filter) is True]
+        if not data:
+            return
+
+        # Sort by date ascending to process chronologically
+        sorted_data = sorted(data, key=lambda x: x.get("ecrelDatrel", ""))
+        
+        statistics = []
+        for item in sorted_data:
+            date_str = item.get("ecrelDatrel")
+            if not date_str:
+                continue
+                
+            try:
+                # Parse date (e.g., 2026-01-15T00:00:00+00:00)
+                dt = datetime.fromisoformat(date_str)
+                # Ensure timezone awareness
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=dt_util.UTC)
+                
+                total_val = item.get("ecrelVal")
+                
+                if total_val is not None:
+                    statistics.append(
+                        StatisticData(
+                            start=dt,
+                            state=total_val,
+                            sum=total_val
+                        )
+                    )
+            except ValueError:
+                _LOGGER.warning("Invalid date format: %s", date_str)
+                continue
+
+        if not statistics:
+            return
+
+        metadata = StatisticMetaData(
+            has_mean=False,
+            has_sum=True,
+            name=self.name,
+            source=DOMAIN,
+            statistic_id=self.entity_id,
+            unit_of_measurement=self.native_unit_of_measurement,
+        )
+
+        async_import_statistics(self.hass, metadata, statistics)
+        _LOGGER.debug("Imported %d statistics for %s", len(statistics), self.entity_id)
