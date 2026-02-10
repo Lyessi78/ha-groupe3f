@@ -87,6 +87,7 @@ class Groupe3FApi:
         async with self._session.get(url, headers=headers) as resp:
             resp.raise_for_status()
             data = await resp.json()
+            _LOGGER.debug("Sommaires response: %s", data)
             if isinstance(data, list) and len(data) > 0:
                 return str(data[0]["contratId"])
             raise Exception("No contracts found")
