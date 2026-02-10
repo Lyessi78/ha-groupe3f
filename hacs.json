@@ -1,0 +1,7 @@
+{
+  "name": "Groupe 3F",
+  "render_readme": true,
+  "filename": "groupe3f.zip",
+  "homeassistant": "2024.1.0",
+  "iot_class": "Cloud Polling"
+}

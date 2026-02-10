@@ -1,0 +1,11 @@
+{
+  "domain": "groupe3f",
+  "name": "Groupe 3F",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": "https://github.com/ton-user/groupe3f",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/ton-user/groupe3f/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

@@ -1,0 +1,22 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Account already configured",
+      "no_contracts": "No contracts found"
+    },
+    "error": {
+      "cannot_connect": "Connection error",
+      "invalid_auth": "Invalid code"
+    },
+    "step": {
+      "user": {
+        "title": "Connect to 3F",
+        "data": {"username": "Email", "password": "Password"}
+      },
+      "2fa": {
+        "title": "Verification Code",
+        "data": {"code": "Code received"}
+      }
+    }
+  }
+}
