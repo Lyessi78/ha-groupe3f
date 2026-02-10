@@ -10,8 +10,11 @@ from .const import BASE_URL
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
     "Accept": "application/json, text/plain, */*",
+    "3f-version-app": "2.3.4",
+    "Referer": "https://eclient.groupe3f.fr/",
+    "Origin": "https://eclient.groupe3f.fr",
 }
 
 class Groupe3FApi:
