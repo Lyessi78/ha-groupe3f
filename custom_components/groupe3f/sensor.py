@@ -136,5 +136,6 @@ class Groupe3FSensor(CoordinatorEntity, SensorEntity):
             unit_of_measurement=self.native_unit_of_measurement,
         )
 
+        _LOGGER.debug("Attempting to import %d statistics for %s", len(statistics), self.entity_id)
         async_import_statistics(self.hass, metadata, statistics)
-        _LOGGER.debug("Imported %d statistics for %s", len(statistics), self.entity_id)
+        _LOGGER.info("Successfully imported %d historical statistics for %s", len(statistics), self.entity_id)
