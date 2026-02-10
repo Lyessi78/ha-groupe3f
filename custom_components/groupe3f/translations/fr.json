@@ -11,11 +11,17 @@
     "step": {
       "user": {
         "title": "Connexion 3F",
-        "data": {"username": "Email", "password": "Mot de passe"}
+        "data": {
+          "username": "Email",
+          "password": "Mot de passe",
+          "price_per_m3": "Prix par m³ (€)"
+        }
       },
       "2fa": {
         "title": "Code de vérification",
-        "data": {"code": "Code reçu par Email/SMS"}
+        "data": {
+          "code": "Code reçu par Email/SMS"
+        }
       }
     }
   }

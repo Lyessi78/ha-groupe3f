@@ -76,7 +76,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({
                 vol.Required(CONF_USERNAME): str,
                 vol.Required(CONF_PASSWORD): str,
-                vol.Optional(CONF_PRICE, default=0.0): float,
+                vol.Optional(CONF_PRICE, default=0.0): vol.Coerce(float),
             }),
             errors=errors
         )
