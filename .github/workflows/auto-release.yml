@@ -1,0 +1,59 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.md'
+      - '.github/**'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Next Version
+        id: version
+        uses: paulhatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "v"
+          major_pattern: "BREAKING CHANGE:"
+          minor_pattern: "feat:"
+          version_format: "${major}.${minor}.${patch}"
+
+      - name: Update manifest.json
+        run: |
+          jq --arg ver "${{ steps.version.outputs.version }}" '.version = $ver' custom_components/groupe3f/manifest.json > tmp.json && mv tmp.json custom_components/groupe3f/manifest.json
+          
+          # Configure git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Commit changes if manifest was updated
+          if [[ -n $(git status -s custom_components/groupe3f/manifest.json) ]]; then
+            git add custom_components/groupe3f/manifest.json
+            git commit -m "chore: bump version to ${{ steps.version.outputs.version }} [skip ci]"
+            git push
+          fi
+
+      - name: Create Release Archive
+        run: |
+          cd custom_components/groupe3f
+          zip -r ../../groupe3f.zip .
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Release v${{ steps.version.outputs.version }}
+          files: groupe3f.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
