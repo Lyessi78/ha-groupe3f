@@ -9,6 +9,11 @@ from .const import BASE_URL
 
 _LOGGER = logging.getLogger(__name__)
 
+DEFAULT_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json, text/plain, */*",
+}
+
 class Groupe3FApi:
     """API Client to handle communication with Groupe 3F."""
 
@@ -37,7 +42,7 @@ class Groupe3FApi:
         }
 
         try:
-            async with self._session.post(url, json=payload) as resp:
+            async with self._session.post(url, json=payload, headers=DEFAULT_HEADERS) as resp:
                 resp.raise_for_status()
                 data = await resp.json()
 
@@ -63,7 +68,7 @@ class Groupe3FApi:
             }
         }
 
-        async with self._session.post(url, json=payload) as resp:
+        async with self._session.post(url, json=payload, headers=DEFAULT_HEADERS) as resp:
             resp.raise_for_status()
             data = await resp.json()
             if "token" in data:
@@ -74,7 +79,7 @@ class Groupe3FApi:
     async def get_contract_id(self) -> str:
         """Fetch the first available contract ID from summary."""
         url = f"{BASE_URL}/sommaires"
-        headers = {"Authorization": f"Bearer {self._token}"}
+        headers = {**DEFAULT_HEADERS, "Authorization": f"Bearer {self._token}"}
 
         async with self._session.get(url, headers=headers) as resp:
             resp.raise_for_status()
@@ -86,7 +91,7 @@ class Groupe3FApi:
     async def get_water_consumption(self, contract_id: str) -> List[Dict[str, Any]]:
         """Fetch consumption data."""
         url = f"{BASE_URL}/contrats/{contract_id}/eau_consos"
-        headers = {"Authorization": f"Bearer {self._token}"}
+        headers = {**DEFAULT_HEADERS, "Authorization": f"Bearer {self._token}"}
 
         async with self._session.get(url, headers=headers) as resp:
             resp.raise_for_status()
