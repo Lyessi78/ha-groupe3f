@@ -13,8 +13,6 @@ DEFAULT_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
     "Accept": "application/json, text/plain, */*",
     "3f-version-app": "2.3.4",
-    "Referer": "https://eclient.groupe3f.fr/",
-    "Origin": "https://eclient.groupe3f.fr",
 }
 
 class Groupe3FApi:
@@ -23,6 +21,7 @@ class Groupe3FApi:
     def __init__(self, session: aiohttp.ClientSession) -> None:
         self._session = session
         self._token: Optional[str] = None
+        self._username: Optional[str] = None
         # Generate a unique ID to simulate a persistent device
         self._trusted_id = str(uuid.uuid4())
 
@@ -37,6 +36,7 @@ class Groupe3FApi:
 
     async def login(self, username, password) -> Dict[str, Any]:
         """Attempt to login."""
+        self._username = username
         url = f"{BASE_URL}/login"
         payload = {
             "username": username,
@@ -79,15 +79,39 @@ class Groupe3FApi:
                 return {"status": "success", "data": data}
             raise Exception("Invalid 2FA response")
 
-    async def get_contract_id(self) -> str:
-        """Fetch the first available contract ID from summary."""
-        url = f"{BASE_URL}/sommaires"
+    async def get_caint_num(self) -> str:
+        """Fetch the caintNum (allocataire number)."""
+        if not self._username:
+            raise Exception("Username not set")
+            
+        url = f"{BASE_URL}/comptes"
+        params = {"email": self._username}
         headers = {**DEFAULT_HEADERS, "Authorization": f"Bearer {self._token}"}
 
-        async with self._session.get(url, headers=headers) as resp:
+        async with self._session.get(url, params=params, headers=headers) as resp:
             resp.raise_for_status()
             data = await resp.json()
-            _LOGGER.debug("Sommaires response: %s", data)
+            
+            if isinstance(data, list) and len(data) > 0:
+                # Navigate through the structure: [0] -> clients -> [0] -> caintNum
+                account = data[0]
+                if "clients" in account and isinstance(account["clients"], list) and len(account["clients"]) > 0:
+                    return str(account["clients"][0]["caintNum"])
+            
+            raise Exception("No caintNum found in account data")
+
+    async def get_contract_id(self) -> str:
+        """Fetch the first available contract ID from summary."""
+        caint_num = await self.get_caint_num()
+        
+        url = f"{BASE_URL}/sommaires"
+        params = {"caint_num": caint_num}
+        headers = {**DEFAULT_HEADERS, "Authorization": f"Bearer {self._token}"}
+
+        async with self._session.get(url, params=params, headers=headers) as resp:
+            resp.raise_for_status()
+            data = await resp.json()
+
             if isinstance(data, list) and len(data) > 0:
                 return str(data[0]["contratId"])
             raise Exception("No contracts found")
