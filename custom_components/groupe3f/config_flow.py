@@ -10,7 +10,7 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import Groupe3FApi
-from .const import CONF_CONTRACT_ID, CONF_TOKEN, CONF_TRUSTED_ID, DOMAIN, CONF_PRICE
+from .const import CONF_CONTRACT_ID, CONF_TOKEN, CONF_TRUSTED_ID, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,7 +22,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._username = None
         self._password = None
-        self._price = 0.0
         self._api = None
 
     async def _finish_setup(self, token: str) -> config_entries.ConfigFlowResult:
@@ -45,7 +44,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_CONTRACT_ID: contract_id,
                     CONF_TOKEN: token,
                     CONF_TRUSTED_ID: self._api.get_trusted_id(),
-                    CONF_PRICE: self._price,
                 },
             )
         except Exception:
@@ -58,7 +56,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input:
             self._username = user_input[CONF_USERNAME]
             self._password = user_input[CONF_PASSWORD]
-            self._price = user_input.get(CONF_PRICE, 0.0)
             session = async_get_clientsession(self.hass)
             self._api = Groupe3FApi(session)
 
@@ -76,7 +73,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({
                 vol.Required(CONF_USERNAME): str,
                 vol.Required(CONF_PASSWORD): str,
-                vol.Optional(CONF_PRICE, default=0.0): vol.Coerce(float),
             }),
             errors=errors
         )

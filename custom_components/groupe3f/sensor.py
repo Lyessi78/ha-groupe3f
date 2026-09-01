@@ -17,7 +17,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_CONTRACT_ID, DOMAIN, CONF_PRICE
+from .const import CONF_CONTRACT_ID, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,7 +25,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
     """Set up sensors."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     contract_id = entry.data[CONF_CONTRACT_ID]
-    price = entry.data.get(CONF_PRICE, 0.0)
 
     entities = []
     # Map JSON boolean keys to Names
@@ -34,7 +33,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     for key, name in types.items():
         # Check if any data exists for this meter type
         if any(item.get(key) is True for item in coordinator.data):
-            entities.append(Groupe3FSensor(hass, coordinator, contract_id, key, name, price))
+            entities.append(Groupe3FSensor(hass, coordinator, contract_id, key, name))
 
     async_add_entities(entities)
 
@@ -45,11 +44,10 @@ class Groupe3FSensor(CoordinatorEntity, SensorEntity):
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = UnitOfVolume.CUBIC_METERS
 
-    def __init__(self, hass, coordinator, contract_id, filter_key, name, price):
+    def __init__(self, hass, coordinator, contract_id, filter_key, name):
         super().__init__(coordinator)
         self.hass = hass
         self._filter = filter_key
-        self._price = price
         self._attr_name = name
         self._attr_unique_id = f"{contract_id}_{filter_key}"
         self._attr_device_info = DeviceInfo(
@@ -77,8 +75,7 @@ class Groupe3FSensor(CoordinatorEntity, SensorEntity):
         return {
             "last_reading": latest.get("ecrelDatrel"),
             "serial_number": latest.get("painsCodser", "").strip(),
-            "monthly_cons_m3": latest.get("ecconVal"),
-            "price_per_m3": self._price
+            "monthly_cons_m3": latest.get("ecconVal")
         }
 
     async def async_added_to_hass(self) -> None:
