@@ -99,46 +99,36 @@ class Groupe3FSensor(CoordinatorEntity, SensorEntity):
 
         # Sort by date ascending to process chronologically
         sorted_data = sorted(data, key=lambda x: x.get("ecrelDatrel", ""))
-        
+
         statistics = []
-        # We need to track the cumulative cost
-        # Since we only have total volume, we can calculate total cost = volume * price
-        # This assumes price has always been the same, which is an approximation
-        
+        cumulative_sum = 0
+
         for item in sorted_data:
             date_str = item.get("ecrelDatrel")
             if not date_str:
                 continue
-                
+
             try:
                 # Parse date (e.g., 2026-01-15T00:00:00+00:00)
                 dt = datetime.fromisoformat(date_str)
                 # Ensure timezone awareness
                 if dt.tzinfo is None:
                     dt = dt.replace(tzinfo=dt_util.UTC)
-                
-                total_val = item.get("ecrelVal")
-                
-                if total_val is not None:
+
+                # Use ecrelVal (meter index) as state for current reading
+                meter_index = item.get("ecrelVal")
+                # Use ecconVal (monthly consumption) for the incremental value
+                monthly_consumption = item.get("ecconVal", 0)
+
+                if meter_index is not None and monthly_consumption is not None:
+                    # Accumulate the monthly consumption to build the sum
+                    cumulative_sum += monthly_consumption
+
                     stat_data = {
                         "start": dt,
-                        "state": total_val,
-                        "sum": total_val
+                        "state": meter_index,  # Current meter reading
+                        "sum": cumulative_sum   # Cumulative consumption from start
                     }
-                    
-                    # Add cost if price is defined
-                    if self._price > 0:
-                        # Cost is cumulative sum of cost
-                        # Simple model: Total Cost = Total Volume * Price
-                        total_cost = total_val * self._price
-                        stat_data["state"] = total_val
-                        stat_data["sum"] = total_val
-                        # Note: async_import_statistics doesn't support 'cost' directly in StatisticData for external source easily
-                        # But for 'recorder' source, we usually import the 'sum' of the sensor.
-                        # To have cost, we usually need a separate cost sensor or let HA calculate it.
-                        # However, HA Energy dashboard calculates cost based on price entity or static price.
-                        # If we want to FORCE historical cost, we need to import statistics for a generated COST sensor, not the volume sensor.
-                        pass
 
                     statistics.append(StatisticData(**stat_data))
             except ValueError:
