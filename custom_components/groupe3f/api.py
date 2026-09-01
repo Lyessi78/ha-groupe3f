@@ -12,7 +12,7 @@ _LOGGER = logging.getLogger(__name__)
 DEFAULT_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
     "Accept": "application/json, text/plain, */*",
-    "3f-version-app": "2.3.4",
+    "3f-version-app": "2.3.5",
 }
 
 class Groupe3FApi:

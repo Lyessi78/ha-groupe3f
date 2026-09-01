@@ -19,7 +19,7 @@ Cette intégration permet de récupérer votre consommation d'eau (Chaude et Fro
 
 1.  Ouvrez HACS dans Home Assistant.
 2.  Cliquez sur les 3 points en haut à droite > **Dépôts personnalisés**.
-3.  Ajoutez l'URL de ce dépôt : `https://github.com/ton-user/ha-groupe3f` (remplacez par votre URL réelle).
+3.  Ajoutez l'URL de ce dépôt : `https://github.com/Lyessi78/ha-groupe3f`.
 4.  Sélectionnez la catégorie **Intégration**.
 5.  Cliquez sur **Installer**.
 6.  Redémarrez Home Assistant.
