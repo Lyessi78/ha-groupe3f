@@ -5,14 +5,10 @@ from datetime import datetime
 from typing import Any
 
 from homeassistant.components.recorder.models import StatisticData, StatisticMetaData
-from homeassistant.components.recorder.statistics import (
-    async_import_statistics,
-    get_last_statistics,
-)
-from homeassistant.components.sensor import (
-    SensorDeviceClass, SensorEntity, SensorStateClass
-)
+from homeassistant.components.recorder.statistics import async_add_external_statistics
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.const import UnitOfVolume
+from homeassistant.core import callback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
@@ -27,29 +23,39 @@ async def async_setup_entry(hass, entry, async_add_entities):
     contract_id = entry.data[CONF_CONTRACT_ID]
 
     entities = []
-    # Map JSON boolean keys to Names
-    types = {"compteurChaud": "Eau Chaude", "compteurFroid": "Eau Froide"}
+    # Map JSON boolean keys to (Name, slug used in the external statistic id)
+    types = {
+        "compteurChaud": ("Eau Chaude", "eau_chaude"),
+        "compteurFroid": ("Eau Froide", "eau_froide"),
+    }
 
-    for key, name in types.items():
+    for key, (name, slug) in types.items():
         # Check if any data exists for this meter type
         if any(item.get(key) is True for item in coordinator.data):
-            entities.append(Groupe3FSensor(hass, coordinator, contract_id, key, name))
+            entities.append(Groupe3FSensor(hass, coordinator, contract_id, key, name, slug))
 
     async_add_entities(entities)
 
 class Groupe3FSensor(CoordinatorEntity, SensorEntity):
-    """Groupe 3F Sensor."""
+    """Groupe 3F Sensor.
+
+    The entity only exposes the latest meter index for display. Consumption
+    history is published as an external statistic (see _import_historical_statistics),
+    so no state_class is set here: that would make the recorder compile its own
+    statistics and fight with the imported ones over the same statistic id.
+    """
     _attr_has_entity_name = True
     _attr_device_class = SensorDeviceClass.WATER
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = UnitOfVolume.CUBIC_METERS
 
-    def __init__(self, hass, coordinator, contract_id, filter_key, name):
+    def __init__(self, hass, coordinator, contract_id, filter_key, name, slug):
         super().__init__(coordinator)
         self.hass = hass
         self._filter = filter_key
         self._attr_name = name
         self._attr_unique_id = f"{contract_id}_{filter_key}"
+        self._statistic_id = f"{DOMAIN}:{contract_id}_{slug}"
+        self._statistic_name = f"Compteur 3F ({contract_id}) {name}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, contract_id)},
             name=f"Compteur 3F ({contract_id})",
@@ -83,10 +89,11 @@ class Groupe3FSensor(CoordinatorEntity, SensorEntity):
         await super().async_added_to_hass()
         self._import_historical_statistics()
 
-    async def _update_callback(self) -> None:
-        """Handle update."""
-        await super()._update_callback()
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
         self._import_historical_statistics()
+        super()._handle_coordinator_update()
 
     def _import_historical_statistics(self):
         """Import historical statistics from API data."""
@@ -138,12 +145,12 @@ class Groupe3FSensor(CoordinatorEntity, SensorEntity):
         metadata = StatisticMetaData(
             has_mean=False,
             has_sum=True,
-            name=self.name,
-            source="recorder",
-            statistic_id=self.entity_id,
-            unit_of_measurement=self.native_unit_of_measurement,
+            name=self._statistic_name,
+            source=DOMAIN,
+            statistic_id=self._statistic_id,
+            unit_of_measurement=UnitOfVolume.CUBIC_METERS,
         )
 
-        _LOGGER.debug("Attempting to import %d statistics for %s", len(statistics), self.entity_id)
-        async_import_statistics(self.hass, metadata, statistics)
-        _LOGGER.info("Successfully imported %d historical statistics for %s", len(statistics), self.entity_id)
+        _LOGGER.debug("Attempting to import %d statistics for %s", len(statistics), self._statistic_id)
+        async_add_external_statistics(self.hass, metadata, statistics)
+        _LOGGER.info("Successfully imported %d historical statistics for %s", len(statistics), self._statistic_id)

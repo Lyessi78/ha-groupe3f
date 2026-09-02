@@ -13,8 +13,7 @@
         "title": "Connect to 3F",
         "data": {
           "username": "Email",
-          "password": "Password",
-          "price_per_m3": "Price per m³ (€)"
+          "password": "Password"
         }
       },
       "2fa": {
